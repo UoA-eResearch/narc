@@ -11,23 +11,23 @@ endpoints = {
     "account": "https://accounts.rc.nectar.org.au/api/",
     "alarming": "https://alarming.rc.nectar.org.au/",
     "allocations": "https://allocations.rc.nectar.org.au/rest_api/",
-    "application_catalog": "https://murano.rc.nectar.org.au:8082/",
+    "application-catalog": "https://murano.rc.nectar.org.au:8082/",
     "cloudformation": "https://heat.rc.nectar.org.au:8000/",
     "compute": "https://nova.rc.nectar.org.au:8774/",
-    "container_infra": "https://magnum.rc.nectar.org.au:9511/",
+    "container-infra": "https://magnum.rc.nectar.org.au:9511/",
     "database": "https://dbaas.rc.nectar.org.au/",
     "dns": "https://designate.rc.nectar.org.au:9001/",
     "ec2": "https://nova.rc.nectar.org.au:8773/services/cloud",
     "identity": "https://keystone.rc.nectar.org.au:5000/",
     "image": "https://image.rc.nectar.org.au/",
-    "key_manager": "https://key-manager.rc.nectar.org.au/",
-    "load_balancer": "https://lbaas.rc.nectar.org.au:9876/",
+    "key-manager": "https://key-manager.rc.nectar.org.au/",
+    "load-balancer": "https://lbaas.rc.nectar.org.au:9876/",
     "message": "https://taynac.rc.nectar.org.au/",
     "metric": "https://gnocchi.rc.nectar.org.au:8041/",
-    "nectar ops": "https://status.rc.nectar.org.au/api/",
-    "nectar_reservation": "https://warre.rc.nectar.org.au/",
+    "nectar-ops": "https://status.rc.nectar.org.au/api/",
+    "nectar-reservation": "https://warre.rc.nectar.org.au/",
     "network": "https://neutron.rc.nectar.org.au:9696/",
-    "object_store": "https://object-store.rc.nectar.org.au/",
+    "object-store": "https://object-store.rc.nectar.org.au/",
     "orchestration": "https://heat.rc.nectar.org.au:8004/",
     "outage": "https://status.rc.nectar.org.au/api/",
     "placement": "https://placement.rc.nectar.org.au/placement/",
@@ -53,7 +53,7 @@ class NARC:
         self.access_rules = list()
 
         # Load configuration options
-        self.endpoints = endpoints.endpoints
+        self.endpoints = endpoints
 
     def load(self, loader):
         """Run when addon is loaded, adds optional arguments."""
@@ -98,7 +98,7 @@ class NARC:
         if self.url_filter not in url:
             return
 
-        print("[+] Potentially interesting HTTP request...")
+        print("[+] Narcing on HTTP request...")
 
         # Skip anything that does not match documented Nectar API endpoints
         matching_endpoint_name = None
