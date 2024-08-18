@@ -1,12 +1,16 @@
 import json
+import logging
 from typing import Optional
 from uuid import UUID
 
 from mitmproxy import http
 from mitmproxy import ctx
+from mitmproxy.log import ALERT
 
 
 endpoints = {
+    # https://dashboard.rc.nectar.org.au/project/api_access/
+    # openstack service list -c Name -c Type
     "accelerator": "https://accelerator.rc.nectar.org.au/",
     "account": "https://accounts.rc.nectar.org.au/api/",
     "alarming": "https://alarming.rc.nectar.org.au/",
@@ -47,7 +51,6 @@ class NARC:
         self.url_filter = "nectar.org.au"
         # Addon options
         self.output_filename = "access_rules"
-        self.output_format = "yaml"
         self.remove_uuid_from_path = True
         # Addon data structures
         self.access_rules = list()
@@ -64,16 +67,10 @@ class NARC:
             help="Specify a custom output file name",
         )
         loader.add_option(
-            name="format",
-            typespec=Optional[str],
-            default="yaml",
-            help="Specify JSON or YAML output file format",
-        )
-        loader.add_option(
             name="uuid",
             typespec=Optional[bool],
             default=True,
-            help="Remove UUIDs from end of API path",
+            help="Wildcard UUIDs from API path",
         )
         loader.add_option(
             name="wildcard",
@@ -86,8 +83,6 @@ class NARC:
         """Run when configuration is updated."""
         if "output" in updated:
             self.output_filename = ctx.options.output
-        if "format" in updated:
-            self.output_format = ctx.options.format
 
     def request(self, flow: http.HTTPFlow) -> None:
         """Handle all HTTP/S requests from mitmdump."""
@@ -101,7 +96,7 @@ class NARC:
         print("[+] Narcing on HTTP request...")
 
         # Skip anything that does not match documented Nectar API endpoints
-        matching_endpoint_name = None
+        matching_service_name = None
         matched = False
 
         while not matched:
@@ -109,40 +104,64 @@ class NARC:
                 if not url.startswith(endpoint_path):
                     continue
                 else:
-                    matching_endpoint_name = endpoint_name
+                    matching_service_name = endpoint_name
                     matched = True
 
-        # Remove parameters from URL
-        endpoint_path = url.split("?")[0]
-
-        # Remove UUID from end of path, if request (on by default)
-        if self.remove_uuid_from_path:
-            is_uuid = False
-            endpoint_path_list = endpoint_path.split("/")
-            potential_uuid = endpoint_path_list[-1]
-            try:
-                _ = UUID(potential_uuid)
-                is_uuid = True
-            except ValueError:
-                pass
-
-            if is_uuid:
-                del endpoint_path_list[-1]
-                endpoint_path = ("/").join(endpoint_path_list)
-
         tmp_access_rule = {
-            "service": matching_endpoint_name,
+            "service": matching_service_name,
             "method": method,
-            "path": endpoint_path,
+            "path": None,  # Not yet processed
+            "url": url,
         }
 
         self.access_rules.append(tmp_access_rule)
 
     def done(self):
         """Run when exiting mitmproxy."""
+        logging.log(ALERT, "> Processing output...")
+        processed_access_rules = list()
+
+        # Loop all findings and preprocess before export
+        for access_rule in self.access_rules:
+            path = access_rule.get("url")
+
+            # Log the path to stdout
+            logging.log(ALERT, path)
+
+            # Remove endpoint prefix from path (HTTP, domain, port)
+            path = path.replace(endpoints[access_rule["service"]], "")
+
+            # Remove parameters from URL
+            path = path.split("?")[0]
+
+            # Remove UUID from path segment, if request (on by default)
+            if self.remove_uuid_from_path:
+                path_fixed = list()
+                path_segments = path.split("/")
+                for path_segment in path_segments:
+                    try:
+                        _ = UUID(path_segment)
+                        path_fixed.append("*")
+                    except ValueError:
+                        path_fixed.append(path_segment)
+
+                path = ("/").join(path_fixed)
+
+                # Prepend slash to path
+                path = f"/{path}"
+
+                logging.log(ALERT, path)
+
+            processed_access_rule = {
+                "service": access_rule["service"],
+                "method": access_rule["method"],
+                "path": path,
+            }
+            processed_access_rules.append(processed_access_rule)
+
         # Create a dict of unique keys (method + | + path)
         unique_access_rules = {
-            f"{access_rule['method']}|{access_rule['path']}": access_rule for access_rule in self.access_rules
+            f"{access_rule['method']}|{access_rule['path']}": access_rule for access_rule in processed_access_rules
         }
         # Remove the keys to get a list of values
         unique_access_rules = list(unique_access_rules.values())
