@@ -1,5 +1,6 @@
 import json
 import logging
+from pathlib import Path
 from typing import Optional
 from uuid import UUID
 
@@ -47,11 +48,11 @@ endpoints = {
 class NARC:
     def __init__(self):
         """Run first, before load."""
-        # Addon defaults
-        self.url_filter = "nectar.org.au"
         # Addon options
         self.output_filename = "access_rules"
-        self.remove_uuid_from_path = True
+        self.wildcard_uuid_in_path = True
+        self.wildcard_suffix_in_path = True
+
         # Addon data structures
         self.access_rules = list()
 
@@ -76,13 +77,17 @@ class NARC:
             name="wildcard",
             typespec=Optional[bool],
             default=True,
-            help="Use wildcard (bare) API paths (less secure, more simple)."
+            help="Use wildcard on base API paths (less secure, more simple)."
         )
 
     def configure(self, updated):
         """Run when configuration is updated."""
         if "output" in updated:
             self.output_filename = ctx.options.output
+        if "uuid" in updated:
+            self.wildcard_uuid_in_path = ctx.options.uuid
+        if "wildcard" in updated:
+            self.wildcard_suffix_in_path = ctx.options.wildcard
 
     def request(self, flow: http.HTTPFlow) -> None:
         """Handle all HTTP/S requests from mitmdump."""
@@ -90,15 +95,16 @@ class NARC:
         method = flow.request.method
 
         # Skip anything that is not a request to nectar.org.au domain
-        if self.url_filter not in url:
+        if "nectar.org.au" not in url:
             return
 
-        print("[+] Narcing on HTTP request...")
+        logging.log(ALERT, ">>> Narcing on HTTP request...")
 
         # Skip anything that does not match documented Nectar API endpoints
         matching_service_name = None
         matched = False
 
+        # Check the request URL matches a Nectar API endpoint
         while not matched:
             for endpoint_name, endpoint_path in self.endpoints.items():
                 if not url.startswith(endpoint_path):
@@ -114,11 +120,16 @@ class NARC:
             "url": url,
         }
 
+        # Log the result to file
+        log_string = f"{method}\t{url}\n"
+        with open(f"{Path(__file__).name}.log", "a") as f:
+            f.write(log_string)
+
         self.access_rules.append(tmp_access_rule)
 
     def done(self):
         """Run when exiting mitmproxy."""
-        logging.log(ALERT, "> Processing output...")
+        logging.log(ALERT, ">>> Processing output...")
         processed_access_rules = list()
 
         # Loop all findings and preprocess before export
@@ -126,7 +137,7 @@ class NARC:
             path = access_rule.get("url")
 
             # Log the path to stdout
-            logging.log(ALERT, path)
+            logging.log(ALERT, f">>> Raw path: {path}")
 
             # Remove endpoint prefix from path (HTTP, domain, port)
             path = path.replace(endpoints[access_rule["service"]], "")
@@ -134,23 +145,28 @@ class NARC:
             # Remove parameters from URL
             path = path.split("?")[0]
 
-            # Remove UUID from path segment, if request (on by default)
-            if self.remove_uuid_from_path:
+            # Replace UUID with * in path segment, if requested (on by default)
+            if self.wildcard_uuid_in_path:
                 path_fixed = list()
                 path_segments = path.split("/")
                 for path_segment in path_segments:
                     try:
                         _ = UUID(path_segment)
-                        path_fixed.append("*")
+                        path_fixed.append("**")
                     except ValueError:
                         path_fixed.append(path_segment)
 
                 path = ("/").join(path_fixed)
 
-                # Prepend slash to path
-                path = f"/{path}"
+            # Add wildcard to path suffix, if requested (on by default)
+            if self.wildcard_suffix_in_path:
+                if path.endswith("/"):
+                    path = f"{path}**"
 
-                logging.log(ALERT, path)
+            # Prepend slash to path
+            path = f"/{path}"
+
+            logging.log(ALERT, f">>> Fix path: {path}")
 
             processed_access_rule = {
                 "service": access_rule["service"],
