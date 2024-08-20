@@ -13,6 +13,43 @@ The Nectar Access Rules Creator, or `narc`, is a tool to help construct OpenStac
 
 The [`iamlive`](https://github.com/iann0036/iamlive) is an amazing tool that helps AWS developers/admins run AWS CLI commands from their workstation and see the exact permissions used. They take the results, and use it to make "IAM" policies (permissions) in the AWS cloud. This results in very fine-grained and accurate policies.
 
+## Quickstart
+
+- Start `mitmdump` with `narc` script: `./mitmpdump -s narc.py`
+- In another terminal, configure environment variables for `mitmproxy`:
+  - Set `https_proxy` to the default `https://127.0.0.1:8080`
+- Run any OpenStack CLI command, Terraform apply, or any tools that makes API calls
+- When done, use `Ctrl + C` to stop `mitmdump`
+- Review `access_rules.json` and `narc.py.log` for results
+
+OpenStack CLI example:
+
+```
+./mitmpdump -s narc.py
+# Open new terminal
+https_proxy=https://127.0.0.1:8080 \
+openstack \
+--os-cacert ~/.mitmproxy/mitmproxy-ca-cert.pem \
+project list
+```
+
+Example result:
+
+```
+[
+    {
+        "service": "identity",
+        "method": "POST",
+        "path": "/v3/auth/tokens"
+    },
+    {
+        "service": "identity",
+        "method": "GET",
+        "path": "/v3/projects"
+    }
+]
+```
+
 ## Getting Started
 
 ### Requirements
@@ -53,7 +90,10 @@ To stop recording API calls, exit with `Ctrl + C`.
 Results are stored, by default, in:
 
 - `access_rules.json`
-- `access_rules_raw.json`
+
+A log of all HTTP requests is stored in:
+
+- `narc.py.log`
 
 ### Configure Application to use `mitmproxy`
 
@@ -74,7 +114,7 @@ You will need two things:
 An example command:
 
 ```
-https_proxy=https://127.0.0.1:8080 openstack --os-cacert ~/.mitmproxy/mitmproxy-ca-cert.pem projects list
+https_proxy=https://127.0.0.1:8080 openstack --os-cacert ~/.mitmproxy/mitmproxy-ca-cert.pem project list
 ```
 
 Or, you can set an alias in `~/.bashrc`:
@@ -86,7 +126,7 @@ alias openstack_proxy="https_proxy=https://127.0.0.1:8080 openstack --os-cacert 
 Then run the command:
 
 ```
-openstack_proxy projects list
+openstack_proxy project list
 ```
 
 ### Use With Terraform
