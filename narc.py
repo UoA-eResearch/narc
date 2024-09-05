@@ -121,7 +121,7 @@ class NARC:
         }
 
         # Log the result to file
-        log_string = f"{method}\t{url}\n"
+        log_string = f"{method} {url}\n"
         with open(f"{Path(__file__).name}.log", "a") as f:
             f.write(log_string)
 
