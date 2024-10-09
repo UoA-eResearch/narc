@@ -15,7 +15,7 @@ The [`iamlive`](https://github.com/iann0036/iamlive) is an amazing tool that hel
 
 ## Quickstart
 
-- Start `mitmdump` with `narc` script: `./mitmpdump -s narc.py`
+- Start `mitmdump` with `narc` script: `./mitmdump -s narc.py`
 - In another terminal, configure environment variables for `mitmproxy`:
   - Set `https_proxy` to the default `https://127.0.0.1:8080`
 - Run any OpenStack CLI command, Terraform apply, or any tools that makes API calls
@@ -25,7 +25,7 @@ The [`iamlive`](https://github.com/iann0036/iamlive) is an amazing tool that hel
 OpenStack CLI example:
 
 ```
-./mitmpdump -s narc.py
+./mitmdump -s narc.py
 # Open new terminal
 https_proxy=https://127.0.0.1:8080 \
 openstack \
@@ -106,11 +106,6 @@ There are various ways to accomplish both of these.
 
 ### Use Proxy With OpenStack CLI
 
-You will need two things:
-
-- Trust the `mitmproxy` CA to avoid TLS errors: Use `--os-cacert` build into `openstack` command
-- Tell your application to use the proxy: Use `https_proxy` env var to use the proxy
-
 An example command:
 
 ```
@@ -131,14 +126,31 @@ openstack_proxy project list
 
 ### Use With Terraform
 
-You will need two things:
-
-- Trust the `mitmproxy` CA to avoid TLS errors: Use `SSL_CERT_FILE` env var to trust the CA
-- Tell your application to use the proxy: Use `https_proxy` env var to use the proxy
-
+An example command:
 
 ```
 https_proxy=https://127.0.0.1:8080 SSL_CERT_FILE=~/.mitmproxy/mitmproxy-ca-cert.pem terraform apply
+```
+
+### Use With Python
+
+Place the following in to your Python code:
+
+```
+import os
+os.environ["https_proxy"] = "https://127.0.0.1:8080"
+os.environ["SSL_CERT_FILE"] = "/home/thomas/.mitmproxy/mitmproxy-ca-cert.pem"
+```
+
+Then, when you create a session with Keystone, specify the SSL certificate in the `verify` parameter:
+
+```
+import keystoneclient.client as keystone_client
+from keystoneauth1 import session
+
+...
+sess = session.Session(auth=auth, verify=os.environ.get("SSL_CERT_FILE"))
+keystone_c = keystone_client.Client(session=sess)
 ```
 
 ## Access Rules Examples
