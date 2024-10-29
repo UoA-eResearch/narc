@@ -33,6 +33,16 @@ openstack \
 project list
 ```
 
+Terraform CLI example:
+
+```
+./mitmdump -s narc.py
+# Open new terminal
+https_proxy=https://127.0.0.1:8080 \
+SSL_CERT_FILE=~/.mitmproxy/mitmproxy-ca-cert.pem \
+terraform apply
+```
+
 Example result:
 
 ```
