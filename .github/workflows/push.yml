@@ -1,0 +1,9 @@
+---
+name: Push
+
+on:
+  push
+
+jobs:
+  lint_all:
+    uses: ./.github/workflows/lint.yml
