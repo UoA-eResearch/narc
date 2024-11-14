@@ -17,7 +17,9 @@ update_packages:
 	echo "[*] Checking: requirements-dev.txt" && \
 	pur -r requirements-dev.txt && \
 	echo "[*] Checking: requirements.txt" && \
-	pur -r requirements.txt
+	pur -r requirements.txt && \
+	echo "[*] Checking: examples/python/requirements.txt" && \
+	pur -r examples/python/requirements.txt
 
 # MITMPROXY
 update_mitmproxy:

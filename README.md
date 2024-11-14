@@ -7,7 +7,7 @@ The Nectar Access Rules Creator, or `narc`, is a tool to help construct OpenStac
 - "Application Credentials" are used to allow software to talk to OpenStack, similar to users who have passwords
 - "Access Rules" are a type of access control within AppCreds that grant access specific resources
 - Trying to determine what access rules are needed is quite difficult, resulting in using the "Unrestricted" option
-- This tools helps analyse OpenStack API calls and generating an access rules JSON file automatically
+- This tools helps analyse OpenStack API calls and generates an access rules JSON file automatically
 
 ### Similar Tool/Inspiration
 
@@ -41,6 +41,18 @@ Terraform CLI example:
 https_proxy=https://127.0.0.1:8080 \
 SSL_CERT_FILE=~/.mitmproxy/mitmproxy-ca-cert.pem \
 terraform apply
+```
+
+Python example:
+
+```
+./mitmdump -s narc.py
+# Add this to your Python project
+import os
+home_directory = os.path.expanduser("~")
+mitmproxy_ca_cert = f"{home_directory}/.mitmproxy/mitmproxy-ca-cert.pem"
+os.environ["REQUESTS_CA_BUNDLE"] = mitmproxy_ca_cert
+os.environ["https_proxy"] = "https://127.0.0.1:8080"
 ```
 
 Example result:
@@ -114,7 +126,7 @@ You will need two things:
 
 There are various ways to accomplish both of these.
 
-### Use Proxy With OpenStack CLI
+### Use With OpenStack CLI
 
 An example command:
 
@@ -134,25 +146,25 @@ Then run the command:
 openstack_proxy project list
 ```
 
-### Use With Terraform
-
-An example command:
-
-```
-https_proxy=https://127.0.0.1:8080 SSL_CERT_FILE=~/.mitmproxy/mitmproxy-ca-cert.pem terraform apply
-```
-
 ### Use With Python
 
 Place the following in to your Python code:
 
 ```
-import os
+home_directory = os.path.expanduser("~")
+mitmproxy_ca_cert = f"{home_directory}/.mitmproxy/mitmproxy-ca-cert.pem"
+os.environ["REQUESTS_CA_BUNDLE"] = mitmproxy_ca_cert
 os.environ["https_proxy"] = "https://127.0.0.1:8080"
-os.environ["SSL_CERT_FILE"] = "/home/thomas/.mitmproxy/mitmproxy-ca-cert.pem"
 ```
 
-Then, when you create a session with Keystone, specify the SSL certificate in the `verify` parameter:
+Instead of using the `REQUESTS_CA_BUNDLE`, you could use 
+
+```
+home_directory = os.path.expanduser("~")
+os.environ["SSL_CERT_FILE"] = f"{home_directory}/.mitmproxy/mitmproxy-ca-cert.pem"
+```
+
+However, using this method... when you create a session with Keystone, specify the SSL certificate in the `verify` parameter:
 
 ```
 import keystoneclient.client as keystone_client
@@ -163,20 +175,53 @@ sess = session.Session(auth=auth, verify=os.environ.get("SSL_CERT_FILE"))
 keystone_c = keystone_client.Client(session=sess)
 ```
 
-## Access Rules Examples
+### Use With Terraform
+
+An example command:
 
 ```
+https_proxy=https://127.0.0.1:8080 SSL_CERT_FILE=~/.mitmproxy/mitmproxy-ca-cert.pem terraform apply
+```
+
+## Examples
+
+### Python
+
+In a terminal start the proxy:
+
+```
+./mitmdump -s narc.py
+```
+
+Open another terminal, and get the project ready to run:
+
+```
+cd examples/python
+python -m venv venv
+source venv/bin/activate
+pip3 install -r requirements.txt
+```
+
+Go back to original terminal and run the app:
+
+```
+python3 app.py <INSTANCE_ID>
+```
+
+View the resultant access rules:
+
+```
+cat access_rules.json 
 [
-  {
-    "service": "compute",
-    "method": "POST",
-    "path": "/v2.1/servers"
-  }
+    {
+        "service": "identity",
+        "method": "POST",
+        "path": "/v3/auth/tokens"
+    },
+    {
+        "service": "compute",
+        "method": "GET",
+        "path": "/v2.1/servers/**"
+    }
 ]
-```
-
-```
-- service: compute
-  method: POST
-  path: /v2.1/servers
 ```
