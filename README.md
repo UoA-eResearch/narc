@@ -2,14 +2,21 @@
 
 The Nectar Access Rules Creator, or `narc`, is a tool to help construct OpenStack Access Rules for Application Credentials.
 
-## What
+## What?
 
 - "Application Credentials" are used to allow software to talk to OpenStack, similar to users who have passwords
 - "Access Rules" are a type of access control within AppCreds that grant access specific resources
 - Trying to determine what access rules are needed is quite difficult, resulting in using the "Unrestricted" option
 - This tools helps analyse OpenStack API calls and generates an access rules JSON file automatically
 
-### Similar Tool/Inspiration
+## How?
+
+- Configure proxy to intercept OpenStack API calls
+- Add functionality to "tidy" OpenStack API and create a JSON output
+- Run usual OpenStack tooling (e.g., CLI, Python packages, Terraform)
+- Collect results and use when creating Application Credentials
+
+## Inspiration
 
 The [`iamlive`](https://github.com/iann0036/iamlive) is an amazing tool that helps AWS developers/admins run AWS CLI commands from their workstation and see the exact permissions used. They take the results, and use it to make "IAM" policies (permissions) in the AWS cloud. This results in very fine-grained and accurate policies.
 
@@ -22,7 +29,7 @@ The [`iamlive`](https://github.com/iann0036/iamlive) is an amazing tool that hel
 - When done, use `Ctrl + C` to stop `mitmdump`
 - Review `access_rules.json` and `narc.py.log` for results
 
-OpenStack CLI example:
+### OpenStack CLI example
 
 ```
 ./mitmdump -s narc.py
@@ -33,7 +40,7 @@ openstack \
 project list
 ```
 
-Terraform CLI example:
+### Terraform Example
 
 ```
 ./mitmdump -s narc.py
@@ -43,7 +50,7 @@ SSL_CERT_FILE=~/.mitmproxy/mitmproxy-ca-cert.pem \
 terraform apply
 ```
 
-Python example:
+### Python Script Example
 
 ```
 ./mitmdump -s narc.py
@@ -55,7 +62,7 @@ os.environ["REQUESTS_CA_BUNDLE"] = mitmproxy_ca_cert
 os.environ["https_proxy"] = "https://127.0.0.1:8080"
 ```
 
-Example result:
+### Results Example
 
 ```
 [
@@ -65,9 +72,9 @@ Example result:
         "path": "/v3/auth/tokens"
     },
     {
-        "service": "identity",
+        "service": "compute",
         "method": "GET",
-        "path": "/v3/projects"
+        "path": "/v2.1/servers/**"
     }
 ]
 ```
@@ -77,20 +84,21 @@ Example result:
 ### Requirements
 
 - mitmproxy
+- Python >= 3.10
 
 ### Install `mitmproxy`
+
+On Linux, [download binaries](https://mitmproxy.org/), extract binaries, and put in the project root folder, or another folder on your `PATH`:
+
+```
+wget https://downloads.mitmproxy.org/10.4.2/mitmproxy-10.4.2-linux-x86_64.tar.gz
+tar zvf mitmproxy-10.4.2-linux-x86_64.tar.gz
+```
 
 On macOS use `brew`:
 
 ```
 brew install mitmproxy
-```
-
-On Linux, [download binaries](https://mitmproxy.org/), extract binaries, and put in this folder or another folder on your `PATH`:
-
-```
-wget https://downloads.mitmproxy.org/10.4.2/mitmproxy-10.4.2-linux-x86_64.tar.gz
-tar zvf mitmproxy-10.4.2-linux-x86_64.tar.gz
 ```
 
 ### Start `mitmproxy`
@@ -105,7 +113,7 @@ Perform OpenStack API calls, using either:
 
 - The OpenStack CLI
 - The OpenStack Python packages
-- Other IaC tools such as Terraform or Heat
+- Other IaC tools, such as Terraform
 
 To stop recording API calls, exit with `Ctrl + C`.
 
@@ -181,47 +189,4 @@ An example command:
 
 ```
 https_proxy=https://127.0.0.1:8080 SSL_CERT_FILE=~/.mitmproxy/mitmproxy-ca-cert.pem terraform apply
-```
-
-## Examples
-
-### Python
-
-In a terminal start the proxy:
-
-```
-./mitmdump -s narc.py
-```
-
-Open another terminal, and get the project ready to run:
-
-```
-cd examples/python
-python -m venv venv
-source venv/bin/activate
-pip3 install -r requirements.txt
-```
-
-Go back to original terminal and run the app:
-
-```
-python3 app.py <INSTANCE_ID>
-```
-
-View the resultant access rules:
-
-```
-cat access_rules.json 
-[
-    {
-        "service": "identity",
-        "method": "POST",
-        "path": "/v3/auth/tokens"
-    },
-    {
-        "service": "compute",
-        "method": "GET",
-        "path": "/v2.1/servers/**"
-    }
-]
 ```
