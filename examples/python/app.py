@@ -46,7 +46,14 @@ def create_openstack_session() -> session.Session:
     return session.Session(auth=auth)
 
 
-def get_instance(instance_id: str) -> object:
+def main(instance_id: str) -> object:
+    # Set the mitmproxy environment variables
+    os.environ["https_proxy"] = "https://127.0.0.1:8080"
+    home_directory = os.path.expanduser("~")
+    mitmproxy_ca_cert = f"{home_directory}/.mitmproxy/mitmproxy-ca-cert.pem"
+    os.environ["REQUESTS_CA_BUNDLE"] = mitmproxy_ca_cert
+
+    # Create OpenStack session
     has_env_vars = openstack_check_env_vars()
     if not has_env_vars:
         print("[!] Missing credentials... Exiting.")
@@ -54,9 +61,12 @@ def get_instance(instance_id: str) -> object:
     sess = create_openstack_session()
     nova_c = nova_client.Client(2.83, session=sess)
 
-    server = nova_c.servers.get(instance_id)
+    instance = nova_c.servers.get(instance_id)
+    print(f"{instance_id}: {instance.status}")
 
-    return server
+    security_groups = instance.list_security_group()
+    for sg in security_groups:
+        print(f"Security Group: {sg.name}")
 
 
 if __name__ == "__main__":
@@ -64,12 +74,4 @@ if __name__ == "__main__":
     parser.add_argument("instance_id", help="The instance ID to fetch")
     args = parser.parse_args()
     instance_id = args.instance_id
-
-    # Set the mitmproxy environment variables
-    os.environ["https_proxy"] = "https://127.0.0.1:8080"
-    home_directory = os.path.expanduser("~")
-    mitmproxy_ca_cert = f"{home_directory}/.mitmproxy/mitmproxy-ca-cert.pem"
-    os.environ["REQUESTS_CA_BUNDLE"] = mitmproxy_ca_cert
-
-    instance = get_instance(instance_id)
-    print(f"{instance_id}: {instance.status}")
+    main(instance_id)
