@@ -11,10 +11,11 @@ The Nectar Access Rules Creator, or `narc`, is a tool to help construct OpenStac
 
 ## How?
 
-- Configure proxy to intercept OpenStack API calls
-- Add functionality to "tidy" OpenStack API and create a JSON output
+- Start proxy to intercept traffic
 - Run usual OpenStack tooling (e.g., CLI, Python packages, Terraform)
-- Collect results and use when creating Application Credentials
+- Listen to OpenStack API calls
+- "Tidy" OpenStack API calls and create a JSON output
+- Use output to create AppCers
 
 ## Inspiration
 
@@ -22,9 +23,11 @@ The [`iamlive`](https://github.com/iann0036/iamlive) is an amazing tool that hel
 
 ## Quickstart
 
-- Start `mitmdump` with `narc` script: `./mitmdump -s narc.py`
+- Start `mitmdump` with `narc` script:
+- `./mitmdump -s narc.py`
 - In another terminal, configure environment variables for `mitmproxy`:
   - Set `https_proxy` to the default `https://127.0.0.1:8080`
+  - Configure your tooling to use the `mitmproxy` certificate (if needed)
 - Run any OpenStack CLI command, Terraform apply, or any tools that makes API calls
 - When done, use `Ctrl + C` to stop `mitmdump`
 - Review `access_rules.json` and `narc.py.log` for results
@@ -91,8 +94,10 @@ os.environ["https_proxy"] = "https://127.0.0.1:8080"
 On Linux, [download binaries](https://mitmproxy.org/), extract binaries, and put in the project root folder, or another folder on your `PATH`:
 
 ```
-wget https://downloads.mitmproxy.org/10.4.2/mitmproxy-10.4.2-linux-x86_64.tar.gz
-tar zvf mitmproxy-10.4.2-linux-x86_64.tar.gz
+VERSION="11.1.0"
+URL="https://downloads.mitmproxy.org/$${VERSION}/mitmproxy-$${VERSION}-linux-x86_64.tar.gz"
+wget -O mitmproxy.tar.gz ${URL}
+tar -xvf mitmproxy.tar.gz
 ```
 
 On macOS use `brew`:
