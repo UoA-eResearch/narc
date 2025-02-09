@@ -24,7 +24,7 @@ update_packages:
 # MITMPROXY
 update_mitmproxy:
 	echo "[*] Updating mitmproxy..."; \
-	LATEST_VERSION="11.1.0"; \
+	LATEST_VERSION="11.1.2"; \
 	TARGET_ARCHIVE="https://downloads.mitmproxy.org/$${LATEST_VERSION}/mitmproxy-$${LATEST_VERSION}-linux-x86_64.tar.gz"; \
 	wget -O mitmproxy.tar.gz $${TARGET_ARCHIVE}; \
 	tar -xvf mitmproxy.tar.gz
