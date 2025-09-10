@@ -5,7 +5,7 @@ on: workflow_call
 
 jobs:
   lint_all:
-    runs-on: self-hosted
+    runs-on: runner-cerk8s
     steps:
       - name: Check out repository code
         uses: actions/checkout@v5
